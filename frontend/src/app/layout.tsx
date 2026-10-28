@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+
+import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,19 +15,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Wind Forecast Intelligence | GB Day-Ahead",
+  title: "WindScope — GB Wind Forecast Intelligence",
   description:
-    "Actual vs. forecast UK wind generation for January 2026, with MAE, RMSE and imbalance-cost analytics for day-ahead procurement.",
+    "Day-ahead wind forecast accuracy for January 2026: actual vs forecast generation, imbalance risk, and thermal backup cost exposure.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`dark ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full bg-slate-50 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-        {children}
+      <body className="min-h-full bg-background font-sans text-foreground">
+        <TooltipProvider delayDuration={120}>{children}</TooltipProvider>
       </body>
     </html>
   );

@@ -36,10 +36,14 @@ async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new ApiError(
-      `Request to ${path} failed with ${response.status}`,
-      response.status,
-    );
+    let detail = `Request to ${path} failed with ${response.status}`;
+    try {
+      const payload = (await response.json()) as { detail?: unknown };
+      if (typeof payload.detail === "string") detail = payload.detail;
+    } catch {
+      // Non-JSON error body — keep the status-based message.
+    }
+    throw new ApiError(detail, response.status);
   }
 
   return (await response.json()) as T;

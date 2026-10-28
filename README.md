@@ -1,13 +1,31 @@
-# UK Wind Forecast Intelligence
+# WindScope — UK Wind Forecast Intelligence
 
 Full-stack analytics portal for a UK energy utility's day-ahead power
 procurement team. It compares **Elexon WINDFOR wind forecasts** with **actual
 wind generation (FUELHH)** for **January 2026**, quantifies forecast error, and
 translates that error into thermal-backup cost exposure.
 
-> Status: **Phase 1 complete** — Elexon ingestion, gate-closure alignment,
-> disk caching and the KPI API are live. The interactive dashboard (Phase 2)
-> is next.
+![WindScope dashboard](docs/dashboard.png)
+
+> Status: **Phase 2 complete** — FastAPI data engine and the interactive
+> Next.js dashboard are running. Phase 3 packaging (Docker) is included;
+> cloud deployment links will be added after go-live.
+
+## What the dashboard does
+
+- **Actual vs day-ahead forecast** chart across 30-minute settlement periods,
+  with **Full Jan 2026**, **Jan 1–7** and **Jan 15–21** presets plus 30-minute,
+  1-hour and 3-hour resolution controls.
+- **KPI cards** for MAE, RMSE, peak wind imbalance and forecast bias ratio, with
+  coloured deltas against the latest available forecast vintage for the same
+  window.
+- **Settlement Period Details**, **High Error Events Table** and **Publish Lead
+  Time Analysis** tabs.
+- **Thermal backup cost estimator** with a £/MWh slider that turns absolute MW
+  error into financial exposure.
+- **Provenance and failure handling**: live/cached/offline status, refresh,
+  loading skeletons, retries and cached-empty states.
+- **CSV / JSON export** of the aligned series from the chart toolbar.
 
 ## Repository layout
 
@@ -15,6 +33,7 @@ translates that error into thermal-backup cost exposure.
 wind-app/
 ├── backend/                          # FastAPI + pandas data engine
 │   ├── main.py                       # ASGI entrypoint (CORS, router mounting)
+│   ├── Dockerfile                    # Python 3.12 production image
 │   ├── requirements.txt
 │   ├── requirements-dev.txt          # pytest and friends
 │   ├── pytest.ini
@@ -32,14 +51,37 @@ wind-app/
 │   │       └── metrics.py            # MAE / RMSE / imbalance math
 │   ├── data/cache_jan2026.json       # committed January 2026 snapshot
 │   └── tests/                        # metric + alignment + fallback tests
-├── frontend/                         # Next.js (App Router) + TS + Tailwind
-│   ├── src/app/
-│   ├── src/components/
-│   ├── src/lib/api.ts
-│   └── src/types/api.ts
+├── frontend/                         # Next.js 16 (App Router) + TS + Tailwind
+│   ├── Dockerfile                    # standalone production image
+│   ├── src/app/                      # layout, page, theme tokens
+│   ├── src/components/dashboard/     # chart, KPI cards, tables, estimator
+│   ├── src/components/ui/            # shadcn/Radix primitives
+│   ├── src/hooks/                    # dashboard loading/refresh state
+│   ├── src/lib/api.ts                # typed API client
+│   ├── src/lib/format.ts             # MW/GBP/date/CSV formatting
+│   ├── src/lib/ranges.ts             # date presets + resolution types
+│   └── src/types/api.ts              # API contracts
+├── docs/dashboard.png                # UI reference screenshot
+├── docker-compose.yml                # backend + frontend orchestration
 ├── .env.example
 └── README.md
 ```
+
+## Architecture
+
+```
+Next.js dashboard (browser)
+        │  typed JSON over HTTP
+        ▼
+FastAPI + pandas transformation engine
+        │  fetch / cache fallback
+        ▼
+Elexon BMRS (FUELHH actuals + WINDFOR forecasts)
+```
+
+The dashboard only talks to `/api/v1`. The browser reaches the backend at
+`NEXT_PUBLIC_API_URL` (default `http://localhost:8000`). CORS is restricted to
+the configured frontend origins.
 
 ## API contract
 
@@ -124,13 +166,30 @@ Metrics are computed only on periods where both actual and forecast exist, so
   exponential backoff.
 - A fetch with incomplete FUELHH or WINDFOR coverage is rejected, so a partial
   upstream response can never overwrite the good snapshot.
-- Responses report `source` (`elexon` / `cache`) and `cache_updated_at` so the
-  UI can surface data provenance.
-- If neither source is available, endpoints return `503` with a clear message.
+- Responses report `source` (`elexon` / `cache`) and `cache_updated_at`; the
+  dashboard surfaces this in the top bar and sidebar.
+- If neither source is available, endpoints return `503` with a clear message
+  and the UI switches to an explicit offline state with retry.
 
 ## Local setup
 
-### Backend
+### Option A — Docker Compose (recommended)
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+- Dashboard: <http://localhost:3000>
+- API docs: <http://localhost:8000/docs>
+- Health: <http://localhost:8000/api/v1/health>
+
+`NEXT_PUBLIC_API_URL` is **inlined at frontend build time**. If you change it
+(e.g. to point at a cloud backend), rebuild the frontend image.
+
+### Option B — manual
+
+**Backend**
 
 ```bash
 cd backend
@@ -142,8 +201,6 @@ cp .env.example .env
 uvicorn main:app --reload --port 8000
 ```
 
-Health check: <http://localhost:8000/api/v1/health>
-
 Tests:
 
 ```bash
@@ -151,7 +208,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-### Frontend
+**Frontend**
 
 ```bash
 cd frontend
@@ -161,23 +218,60 @@ echo "NEXT_PUBLIC_API_URL=http://localhost:8000" > .env.local
 npm run dev
 ```
 
-Dashboard: <http://localhost:3000>
+Dashboard: <http://localhost:3000>. If port 3000 is busy Next will choose 3001;
+the backend's default CORS list already allows both.
+
+Quality checks:
+
+```bash
+npm run lint
+npm run build
+```
 
 ## Environment variables
 
-| Variable                      | Default                          | Purpose                              |
-| :---------------------------- | :------------------------------- | :----------------------------------- |
-| `CORS_ORIGINS`                | `http://localhost:3000`          | Comma-separated allowed origins      |
-| `ELEXON_BASE_URL`             | `https://data.elexon.co.uk/bmrs/api/v1` | BMRS API base                 |
-| `DATA_YEAR` / `DATA_MONTH`    | `2026` / `1`                     | Dataset scope                        |
-| `GATE_CLOSURE_HOUR_UTC`       | `11`                             | Day-ahead cut-off on D-1             |
-| `CACHE_FILE`                  | `backend/data/cache_jan2026.json`| Cache location                       |
-| `CACHE_TTL_SECONDS`           | `86400`                          | Freshness window before refresh      |
-| `ELEXON_TIMEOUT_SECONDS`      | `30`                             | Per-request timeout                  |
-| `ELEXON_MAX_RETRIES`          | `2`                              | Attempts before falling back         |
+| Variable                      | Default                                                          | Purpose                              |
+| :---------------------------- | :--------------------------------------------------------------- | :----------------------------------- |
+| `CORS_ORIGINS`                | `http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001` | Comma-separated allowed origins |
+| `ELEXON_BASE_URL`             | `https://data.elexon.co.uk/bmrs/api/v1`                          | BMRS API base                        |
+| `DATA_YEAR` / `DATA_MONTH`    | `2026` / `1`                                                     | Dataset scope                        |
+| `GATE_CLOSURE_HOUR_UTC`       | `11`                                                             | Day-ahead cut-off on D-1             |
+| `CACHE_FILE`                  | `backend/data/cache_jan2026.json`                                | Cache location                       |
+| `CACHE_TTL_SECONDS`           | `86400`                                                          | Freshness window before refresh      |
+| `ELEXON_TIMEOUT_SECONDS`      | `30`                                                             | Per-request timeout                  |
+| `ELEXON_MAX_RETRIES`          | `2`                                                              | Attempts before falling back         |
+| `NEXT_PUBLIC_API_URL`         | `http://localhost:8000`                                          | Browser-visible backend base URL     |
+
+## Deployment
+
+The repository is deployment-ready for split hosting:
+
+- **Frontend (Vercel / Netlify):** root directory `frontend`, build
+  `npm run build`, environment `NEXT_PUBLIC_API_URL=https://<backend-host>`.
+- **Backend (Render / Railway / Fly.io):** deploy `backend/` with its
+  `Dockerfile`, set `ENVIRONMENT=production` and
+  `CORS_ORIGINS=https://<frontend-host>`.
+- **Single host:** run `docker compose up --build -d` behind a reverse proxy
+  and map the two published ports.
+
+Production checklist: confirm CORS contains the exact frontend origin, confirm
+`NEXT_PUBLIC_API_URL` is HTTPS, and smoke-test `/api/v1/health`,
+`/api/v1/generation-data` and `/api/v1/metrics` from an incognito window.
+
+> Live URLs are added here once the Vercel and Render projects are linked.
 
 ## AI tool disclosure
 
-This project was built with AI assistance. Tools used so far: **OpenCode**
-(agentic coding assistant powered by DeepSeek V4.1 Flash). All generated code
-was reviewed, and the final submission will list every AI tool used.
+This project was built with AI assistance. Tools used:
+
+- **OpenCode** — agentic coding environment used for implementation,
+  refactoring and test iteration.
+- **DeepSeek V4.1 Flash** — the model powering the OpenCode agent.
+- **shadcn/ui CLI** — scaffolded the Radix-based UI primitives and theme
+  wiring.
+
+No ChatGPT, Claude, GitHub Copilot or other AI coding tools were used. All
+AI-generated code was reviewed and verified with the backend test suite
+(13 passing tests), `npm run lint`, `npm run build`, and browser-level
+Playwright checks covering live data, range changes, tabs, exports, mobile
+layout and offline failure states.

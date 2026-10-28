@@ -31,7 +31,17 @@ class Settings:
 
     cors_origins: list[str] = field(
         default_factory=lambda: _csv(
-            os.getenv("CORS_ORIGINS", "http://localhost:3000")
+            os.getenv(
+                "CORS_ORIGINS",
+                ",".join(
+                    [
+                        "http://localhost:3000",
+                        "http://127.0.0.1:3000",
+                        "http://localhost:3001",
+                        "http://127.0.0.1:3001",
+                    ]
+                ),
+            )
         )
     )
 
