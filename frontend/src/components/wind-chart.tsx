@@ -12,7 +12,7 @@ import {
 } from "recharts";
 import { ChartNoAxesCombined } from "lucide-react";
 
-import type { WindDataPoint } from "@/types/api";
+import type { GenerationDataPoint } from "@/types/api";
 
 const timeFormatter = new Intl.DateTimeFormat("en-GB", {
   day: "2-digit",
@@ -22,7 +22,7 @@ const timeFormatter = new Intl.DateTimeFormat("en-GB", {
   timeZone: "UTC",
 });
 
-export function WindChart({ data }: { data: WindDataPoint[] }) {
+export function WindChart({ data }: { data: GenerationDataPoint[] }) {
   if (data.length === 0) {
     return (
       <div className="flex h-72 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-slate-200 text-center dark:border-slate-700">
@@ -31,11 +31,12 @@ export function WindChart({ data }: { data: WindDataPoint[] }) {
           className="size-6 text-slate-300 dark:text-slate-600"
         />
         <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
-          No aligned settlement periods yet
+          Chart ready for January 2026 data
         </p>
         <p className="max-w-xs text-xs leading-5 text-slate-400">
-          The FUELHH / WINDFOR ingestion pipeline will populate this series once
-          Phase 1 is wired up.
+          The backend now serves aligned settlement periods at{" "}
+          <code className="font-mono">/api/v1/generation-data</code>; dashboard
+          wiring is the next milestone.
         </p>
       </div>
     );
@@ -47,7 +48,7 @@ export function WindChart({ data }: { data: WindDataPoint[] }) {
         <LineChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
           <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200" />
           <XAxis
-            dataKey="start_time"
+            dataKey="startTime"
             tickFormatter={(value: string) => timeFormatter.format(new Date(value))}
             tick={{ fontSize: 11 }}
             minTickGap={48}

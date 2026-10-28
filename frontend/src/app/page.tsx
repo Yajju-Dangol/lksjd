@@ -127,9 +127,9 @@ export default function Home() {
                 30-minute settlement periods · national GB wind fleet
               </CardDescription>
             </div>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1 text-[11px] font-medium text-slate-500 dark:border-slate-700 dark:text-slate-400">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 px-2.5 py-1 text-[11px] font-medium text-emerald-700 dark:border-emerald-500/30 dark:text-emerald-400">
               <ServerCog aria-hidden className="size-3.5" />
-              Awaiting pipeline
+              Pipeline ready
             </span>
           </CardHeader>
           <CardContent>
@@ -180,8 +180,8 @@ export default function Home() {
                 )}
               </div>
               <p className="mt-3 text-xs leading-5 text-slate-400">
-                Controls become interactive once the backend exposes forecast
-                vintages.
+                Both forecast vintages are available from the API; these controls
+                become interactive in the dashboard phase.
               </p>
             </CardContent>
           </Card>

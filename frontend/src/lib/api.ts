@@ -1,8 +1,8 @@
 import type {
+  GenerationDataResponse,
   HealthResponse,
   MetricsResponse,
   SeriesQuery,
-  WindDataResponse,
 } from "@/types/api";
 
 export const API_BASE_URL = (
@@ -49,9 +49,9 @@ export const api = {
   health: (signal?: AbortSignal) =>
     getJson<HealthResponse>("/api/v1/health", signal),
 
-  windData: (query?: SeriesQuery, signal?: AbortSignal) =>
-    getJson<WindDataResponse>(
-      `/api/v1/wind-data${toQueryString(query)}`,
+  generationData: (query?: SeriesQuery, signal?: AbortSignal) =>
+    getJson<GenerationDataResponse>(
+      `/api/v1/generation-data${toQueryString(query)}`,
       signal,
     ),
 
