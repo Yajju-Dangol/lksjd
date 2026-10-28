@@ -19,7 +19,6 @@ import {
   FileSpreadsheet,
 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -263,37 +262,23 @@ export function ForecastChart({
       <CardContent className="px-4 py-4 sm:px-5 sm:py-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-sm font-medium tracking-tight text-zinc-200">
-                Generation vs day-ahead forecast
-              </h2>
-              <Badge
-                variant="outline"
-                className="h-5 border-zinc-800 bg-zinc-900/50 text-[10px] font-normal text-zinc-500"
-              >
-                {range.label}
-              </Badge>
-            </div>
-            <p className="mt-1 text-[11px] text-zinc-500">
-              30-minute settlement periods · GB national wind fleet · UTC
-            </p>
+            <h2 className="text-sm font-medium tracking-tight text-zinc-200">
+              Actual vs forecast
+            </h2>
             <div className="mt-4 flex flex-wrap items-end gap-x-3 gap-y-1">
               <span className="text-3xl font-semibold tracking-tight text-zinc-50 tabular-nums">
                 {showSkeleton || !data ? "—" : formatTwh(actualTwh)}
               </span>
-              <span className="pb-1 text-[11px] text-zinc-500">
-                metered wind generated
-              </span>
+              <span className="pb-1 text-[11px] text-zinc-500">actual</span>
             </div>
             <p className="mt-1.5 text-[11px] tabular-nums text-zinc-600">
-              Day-ahead forecast total{" "}
+              Forecast{" "}
               <span className="text-zinc-400">
                 {showSkeleton || !data ? "—" : formatTwh(forecastTwh)}
               </span>
               {!showSkeleton && data ? (
                 <>
-                  {" "}
-                  ·{" "}
+                  {" · "}
                   <span
                     className={
                       forecastTwh >= actualTwh
@@ -302,8 +287,7 @@ export function ForecastChart({
                     }
                   >
                     {formatSignedTwh(forecastTwh - actualTwh)}
-                  </span>{" "}
-                  net
+                  </span>
                 </>
               ) : null}
             </p>
@@ -397,7 +381,7 @@ export function ForecastChart({
             </span>
             <span className="flex items-center gap-1.5">
               <span className="h-0.5 w-5 rounded-full border-t border-dashed border-emerald-400" />
-              Day-ahead forecast
+              Forecast
             </span>
           </div>
         </div>
@@ -511,16 +495,6 @@ export function ForecastChart({
               </ResponsiveContainer>
             </div>
           )}
-        </div>
-
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-zinc-800/60 pt-3 text-[10px] text-zinc-600">
-          <span>
-            {range.start} → {range.end} · gate closure 11:00 UTC D-1
-          </span>
-          <span className="tabular-nums">
-            {formatNumber(chartData.length)} plotted points ·{" "}
-            {RESOLUTIONS.find((option) => option.value === resolution)?.label}
-          </span>
         </div>
       </CardContent>
     </Card>

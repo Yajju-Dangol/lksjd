@@ -167,10 +167,6 @@ function PeriodTable({
           </TableBody>
         </Table>
       </div>
-      <p className="mt-2 text-[10px] tabular-nums text-zinc-600">
-        Showing latest {formatNumber(latest.length)} of{" "}
-        {formatNumber(points.length)} aligned periods · MW
-      </p>
     </div>
   );
 }
@@ -254,9 +250,6 @@ function HighErrorTable({
           </TableBody>
         </Table>
       </div>
-      <p className="mt-2 text-[10px] text-zinc-600">
-        Ranked by absolute day-ahead forecast miss · top 12 events · MW
-      </p>
     </div>
   );
 }
@@ -392,10 +385,8 @@ function LeadTimeAnalysis({
             </div>
           ))}
         </div>
-        <p className="mt-3 text-[10px] leading-4 text-zinc-600">
-          Only forecasts published before 11:00 UTC on D-1 are eligible.
-          Vertical selection picks the latest compliant vintage for each
-          settlement period.
+        <p className="mt-3 text-[10px] text-zinc-600">
+          Forecasts published before 11:00 UTC D-1.
         </p>
       </div>
     </div>
@@ -406,24 +397,11 @@ export function DataTabs({ points, loading }: DataTabsProps) {
   return (
     <Card className="gap-0 border border-zinc-800/60 bg-zinc-950/70 py-0 ring-0">
       <CardContent className="px-4 py-4 sm:px-5">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div>
-            <h2 className="text-sm font-medium tracking-tight text-zinc-200">
-              Settlement intelligence
-            </h2>
-            <p className="mt-1 text-[11px] text-zinc-500">
-              Period-level evidence behind the headline metrics
-            </p>
-          </div>
-          <Badge
-            variant="outline"
-            className="h-5 border-zinc-800 bg-zinc-900/50 text-[10px] font-normal text-zinc-500"
-          >
-            Day-ahead snapshot
-          </Badge>
-        </div>
+        <h2 className="text-sm font-medium tracking-tight text-zinc-200">
+          Settlement detail
+        </h2>
 
-        <Tabs defaultValue="periods" className="mt-4">
+        <Tabs defaultValue="periods" className="mt-3">
           <TabsList
             variant="line"
             className="h-auto w-full justify-start gap-5 overflow-x-auto border-b border-zinc-800/60 p-0"
@@ -433,24 +411,21 @@ export function DataTabs({ points, loading }: DataTabsProps) {
               className="h-8 flex-none rounded-none px-0 pb-2 text-[11px] font-medium text-zinc-500 data-active:text-zinc-100"
             >
               <Table2 className="size-3.5" />
-              <span className="sm:hidden">Periods</span>
-              <span className="hidden sm:inline">Settlement Period Details</span>
+              Periods
             </TabsTrigger>
             <TabsTrigger
               value="events"
               className="h-8 flex-none rounded-none px-0 pb-2 text-[11px] font-medium text-zinc-500 data-active:text-zinc-100"
             >
               <TriangleAlert className="size-3.5" />
-              <span className="sm:hidden">Error events</span>
-              <span className="hidden sm:inline">High Error Events Table</span>
+              High errors
             </TabsTrigger>
             <TabsTrigger
               value="lead-time"
               className="h-8 flex-none rounded-none px-0 pb-2 text-[11px] font-medium text-zinc-500 data-active:text-zinc-100"
             >
               <Clock3 className="size-3.5" />
-              <span className="sm:hidden">Lead time</span>
-              <span className="hidden sm:inline">Publish Lead Time Analysis</span>
+              Lead time
             </TabsTrigger>
           </TabsList>
 

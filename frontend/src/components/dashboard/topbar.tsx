@@ -18,7 +18,6 @@ interface TopbarProps {
   offline: boolean;
   source: DataSource | null;
   cacheUpdatedAt: string | null;
-  updatedAt: Date | null;
   onMenuClick: () => void;
   onRefresh: () => void;
 }
@@ -92,13 +91,12 @@ export function Topbar({
   offline,
   source,
   cacheUpdatedAt,
-  updatedAt,
   onMenuClick,
   onRefresh,
 }: TopbarProps) {
   return (
     <header className="sticky top-0 z-30 border-b border-zinc-800/60 bg-[#09090b]/80 backdrop-blur-xl">
-      <div className="flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
+      <div className="flex h-14 items-center gap-3 px-4 sm:px-6 lg:px-8">
         <Button
           type="button"
           variant="ghost"
@@ -110,35 +108,19 @@ export function Topbar({
           <Menu className="size-4" />
         </Button>
 
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <h1 className="text-base font-medium tracking-tight text-zinc-100">
-              Dashboard
-            </h1>
-            <Badge
-              variant="outline"
-              className="hidden h-5 border-zinc-800 bg-zinc-900/40 text-[10px] font-normal text-zinc-500 sm:inline-flex"
-            >
-              Jan 2026
-            </Badge>
-          </div>
-          <p className="hidden truncate text-[11px] text-zinc-500 sm:block">
-            GB wind generation · day-ahead forecast intelligence
-          </p>
+        <div className="flex min-w-0 items-center gap-2">
+          <h1 className="text-base font-medium tracking-tight text-zinc-100">
+            Dashboard
+          </h1>
+          <Badge
+            variant="outline"
+            className="hidden h-5 border-zinc-800 bg-zinc-900/40 text-[10px] font-normal text-zinc-500 sm:inline-flex"
+          >
+            Jan 2026
+          </Badge>
         </div>
 
         <div className="ml-auto flex items-center gap-2">
-          {updatedAt ? (
-            <span className="hidden text-[10px] uppercase tracking-wide text-zinc-600 xl:block">
-              Refreshed{" "}
-              {updatedAt.toLocaleTimeString("en-GB", {
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: false,
-              })}
-            </span>
-          ) : null}
-
           <SourceBadge
             offline={offline}
             source={source}
@@ -163,10 +145,6 @@ export function Topbar({
               Refetch metrics and generation data
             </TooltipContent>
           </Tooltip>
-
-          <div className="ml-1 hidden size-8 items-center justify-center rounded-full border border-zinc-800 bg-gradient-to-br from-zinc-800 to-zinc-900 text-[10px] font-semibold tracking-wide text-zinc-300 sm:flex">
-            GB
-          </div>
         </div>
       </div>
     </header>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { RefreshCw, ShieldCheck, TriangleAlert } from "lucide-react";
+import { RefreshCw, TriangleAlert } from "lucide-react";
 
 import { DataTabs } from "@/components/dashboard/data-tabs";
 import { ForecastChart } from "@/components/dashboard/forecast-chart";
@@ -9,10 +9,8 @@ import { KpiCards } from "@/components/dashboard/kpi-cards";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { ThermalEstimator } from "@/components/dashboard/thermal-estimator";
 import { Topbar } from "@/components/dashboard/topbar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useWindDashboard } from "@/hooks/use-wind-dashboard";
-import { formatDateTime, formatNumber } from "@/lib/format";
 import { getRange, type RangeKey, type Resolution } from "@/lib/ranges";
 import { cn } from "@/lib/utils";
 
@@ -71,7 +69,7 @@ export function Dashboard() {
   const [resolution, setResolution] = useState<Resolution>("30m");
 
   const range = getRange(rangeKey);
-  const { data, loading, error, updatedAt, refresh } = useWindDashboard(
+  const { data, loading, error, refresh } = useWindDashboard(
     range.start,
     range.end,
   );
@@ -79,7 +77,6 @@ export function Dashboard() {
   const metrics = data?.metrics ?? null;
   const latestMetrics = data?.latestMetrics ?? null;
   const points = data?.generation.points ?? [];
-  const apiStatus = data != null ? "online" : error != null ? "offline" : "connecting";
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -88,7 +85,6 @@ export function Dashboard() {
         onCollapsedChange={setCollapsed}
         mobileOpen={mobileOpen}
         onMobileOpenChange={setMobileOpen}
-        apiStatus={apiStatus}
       />
 
       <div
@@ -102,7 +98,6 @@ export function Dashboard() {
           offline={data == null && error != null}
           source={data?.generation.source ?? null}
           cacheUpdatedAt={data?.generation.cache_updated_at ?? null}
-          updatedAt={updatedAt}
           onMenuClick={() => setMobileOpen(true)}
           onRefresh={refresh}
         />
@@ -111,35 +106,6 @@ export function Dashboard() {
           aria-label="Wind forecast dashboard"
           className="mx-auto w-full max-w-[1560px] flex-1 px-3 pb-8 pt-4 sm:px-5 lg:px-6"
         >
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2 text-[11px] text-zinc-500">
-              <ShieldCheck className="size-3.5 text-emerald-400" />
-              Strict day-ahead snapshot · gate closure 11:00 UTC D-1
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <Badge
-                variant="outline"
-                className="h-5 gap-1.5 border-zinc-800 bg-zinc-900/40 text-[10px] font-normal text-zinc-500"
-              >
-                <span className="size-1.5 rounded-full bg-zinc-300" />
-                FUELHH actuals
-              </Badge>
-              <Badge
-                variant="outline"
-                className="h-5 gap-1.5 border-zinc-800 bg-zinc-900/40 text-[10px] font-normal text-zinc-500"
-              >
-                <span className="size-1.5 rounded-full bg-emerald-400" />
-                WINDFOR forecast
-              </Badge>
-              <Badge
-                variant="outline"
-                className="h-5 border-zinc-800 bg-zinc-900/40 text-[10px] font-normal tabular-nums text-zinc-500"
-              >
-                {metrics ? `${formatNumber(metrics.sample_size)} periods` : "—"}
-              </Badge>
-            </div>
-          </div>
-
           {error ? (
             <ErrorBanner
               message={error}
@@ -175,26 +141,11 @@ export function Dashboard() {
             className="mt-3 grid grid-cols-1 items-start gap-3 xl:grid-cols-[minmax(0,1fr)_360px]"
           >
             <DataTabs points={points} loading={loading} />
-            <ThermalEstimator
-              points={points}
-              metrics={metrics}
-              loading={loading}
-            />
+            <ThermalEstimator points={points} loading={loading} />
           </section>
 
-          <footer className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-zinc-800/60 pt-3 text-[10px] text-zinc-600">
-            <span>
-              Elexon BMRS · FUELHH + WINDFOR · all timestamps UTC
-            </span>
-            <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              {data?.generation.cache_updated_at ? (
-                <span>
-                  Snapshot cache{" "}
-                  {formatDateTime(data.generation.cache_updated_at)}
-                </span>
-              ) : null}
-              <span>WindScope · day-ahead decision support</span>
-            </span>
+          <footer className="mt-5 border-t border-zinc-800/60 pt-3 text-[10px] text-zinc-600">
+            Elexon BMRS · FUELHH + WINDFOR · UTC
           </footer>
         </main>
       </div>
