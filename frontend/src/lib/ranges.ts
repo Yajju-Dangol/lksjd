@@ -1,9 +1,19 @@
+export const DATASET_START = "2026-01-01";
+export const DATASET_END = "2026-01-31";
+
+export interface ChartRange {
+  key: string;
+  label: string;
+  start: string;
+  end: string;
+}
+
 export const RANGE_PRESETS = [
   {
     key: "full",
     label: "Full Jan 2026",
-    start: "2026-01-01",
-    end: "2026-01-31",
+    start: DATASET_START,
+    end: DATASET_END,
   },
   {
     key: "week1",
@@ -34,7 +44,7 @@ export function getRange(key: RangeKey): RangePreset {
   return RANGE_PRESETS.find((preset) => preset.key === key) ?? RANGE_PRESETS[0];
 }
 
-export function rangeSpanDays(range: RangePreset): number {
+export function rangeSpanDays(range: Pick<ChartRange, "start" | "end">): number {
   const start = new Date(`${range.start}T00:00:00Z`).getTime();
   const end = new Date(`${range.end}T00:00:00Z`).getTime();
   return Math.round((end - start) / 86_400_000) + 1;

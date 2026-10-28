@@ -396,9 +396,16 @@ def get_metrics(start: date, end: date, snapshot: Snapshot) -> MetricsResponse:
         raw.actuals, raw.forecasts, snapshot=snapshot, start=start, end=end
     )
     metrics = compute_error_metrics(frame["error_mw"])
+    aligned = frame.dropna(subset=["error_mw"])
+    max_error_time = (
+        None
+        if aligned.empty
+        else aligned.loc[aligned["error_mw"].abs().idxmax(), "startTime"].to_pydatetime()
+    )
 
     return MetricsResponse(
         **asdict(metrics),
+        max_error_time=max_error_time,
         start=start,
         end=end,
         snapshot=snapshot,

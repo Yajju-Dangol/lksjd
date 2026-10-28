@@ -53,6 +53,10 @@ class MetricsResponse(BaseModel):
     mae_mw: float = Field(description="Mean absolute error (MW)")
     rmse_mw: float = Field(description="Root mean squared error (MW)")
     max_error_mw: float = Field(description="Largest absolute error observed (MW)")
+    max_error_time: datetime | None = Field(
+        default=None,
+        description="Settlement period start of the largest absolute error",
+    )
     total_net_imbalance_mw: float = Field(
         description="Signed sum of (forecast - actual) across the window (MW)"
     )

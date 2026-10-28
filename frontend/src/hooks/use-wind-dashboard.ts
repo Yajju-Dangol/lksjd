@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiError, api, API_BASE_URL } from "@/lib/api";
+import { DATASET_END, DATASET_START } from "@/lib/ranges";
 import type {
   GenerationDataResponse,
   MetricsResponse,
@@ -12,6 +13,7 @@ export interface DashboardData {
   generation: GenerationDataResponse;
   metrics: MetricsResponse;
   latestMetrics: MetricsResponse;
+  monthMetrics: MetricsResponse;
 }
 
 interface DashboardState {
@@ -21,7 +23,11 @@ interface DashboardState {
   updatedAt: Date | null;
 }
 
-export function useWindDashboard(start: string, end: string) {
+export function useWindDashboard(
+  start: string,
+  end: string,
+  externalRefreshToken = 0,
+) {
   const [state, setState] = useState<DashboardState>({
     data: null,
     loading: true,
@@ -57,8 +63,17 @@ export function useWindDashboard(start: string, end: string) {
       const latestMetrics = await api
         .metrics({ start, end, snapshot: "latest" }, controller.signal)
         .catch(() => metrics);
+      const isFullMonth = start === DATASET_START && end === DATASET_END;
+      const monthMetrics = isFullMonth
+        ? metrics
+        : await api
+            .metrics(
+              { start: DATASET_START, end: DATASET_END, snapshot: "day_ahead" },
+              controller.signal,
+            )
+            .catch(() => metrics);
 
-      return { generation, metrics, latestMetrics };
+      return { generation, metrics, latestMetrics, monthMetrics };
     }
 
     load()
@@ -85,7 +100,7 @@ export function useWindDashboard(start: string, end: string) {
       });
 
     return () => controller.abort();
-  }, [start, end, refreshToken]);
+  }, [start, end, refreshToken, externalRefreshToken]);
 
   return { ...state, refresh };
 }

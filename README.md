@@ -16,16 +16,45 @@ translates that error into thermal-backup cost exposure.
 - **Actual vs day-ahead forecast** chart across 30-minute settlement periods,
   with **Full Jan 2026**, **Jan 1–7** and **Jan 15–21** presets plus 30-minute,
   1-hour and 3-hour resolution controls.
+- **Delta fill toggle** that shades every miss red when forecast > actual and
+  green when forecast < actual, so over/under-forecast volume is visible without
+  reading the tooltip.
+- **Storm event spotlight** that jumps to the 48-hour window around the largest
+  error in the data. In the January 2026 snapshot the true peak is **6,857 MW at
+  2026-01-12 01:00 UTC**, so the pill is generated from the API rather than
+  hard-coded to a date.
 - **KPI cards** for MAE, RMSE, peak wind imbalance and forecast bias ratio, with
   coloured deltas against the latest available forecast vintage for the same
   window.
 - **Settlement Period Details**, **High Error Events Table** and **Publish Lead
-  Time Analysis** tabs.
+  Time Analysis** tabs. The details table has instant **All periods**,
+  **High error >2,000 MW** and **Under-forecast only** filters.
+- **Analytical views** in the sidebar:
+  - **Historical Forecasts** — filters the 31 gate-closure publication vintages
+    and compares `publishTime` with `startTime` (median lead time and per-period
+    detail).
+  - **Error Analytics** — a 31-day × 48-settlement-period heatmap, with red for
+    over-forecast and green for under-forecast.
+  - **Market Risk** — ranks January days by peak absolute miss and daily MAE,
+    with extreme/high risk bands and a top-risk-day table.
 - **Thermal backup cost estimator** with a £/MWh slider that turns absolute MW
   error into financial exposure.
 - **Provenance and failure handling**: live/cached/offline status, refresh,
   loading skeletons, retries and cached-empty states.
-- **CSV / JSON export** of the aligned series from the chart toolbar.
+- **CSV / JSON export** of the aligned series from the chart toolbar. CSV columns
+  are `startTime`, `settlementPeriod`, `actual_mw`, `forecast_mw`, `error_mw`,
+  `bias_type` and `imbalance_cost_gbp` (30-minute energy at £120/MWh).
+
+<p align="center">
+  <img src="docs/historical-forecasts.png" alt="Historical forecast vintages" width="32%" />
+  <img src="docs/error-analytics.png" alt="Settlement period heatmap" width="32%" />
+  <img src="docs/market-risk.png" alt="Market risk days" width="32%" />
+</p>
+
+<p align="center">
+  <img src="docs/dashboard-spotlight.png" alt="Storm event spotlight and delta shading" width="80%" />
+</p>
+
 
 ## Repository layout
 
@@ -55,13 +84,14 @@ wind-app/
 │   ├── Dockerfile                    # standalone production image
 │   ├── src/app/                      # layout, page, theme tokens
 │   ├── src/components/dashboard/     # chart, KPI cards, tables, estimator
+│   ├── src/components/views/         # historical, error analytics, market risk
 │   ├── src/components/ui/            # shadcn/Radix primitives
 │   ├── src/hooks/                    # dashboard loading/refresh state
 │   ├── src/lib/api.ts                # typed API client
 │   ├── src/lib/format.ts             # MW/GBP/date/CSV formatting
 │   ├── src/lib/ranges.ts             # date presets + resolution types
 │   └── src/types/api.ts              # API contracts
-├── docs/dashboard.png                # UI reference screenshot
+├── docs/                             # dashboard and analytical-view screenshots
 ├── docker-compose.yml                # backend + frontend orchestration
 ├── .env.example
 └── README.md
@@ -92,8 +122,9 @@ the configured frontend origins.
 | GET    | `/api/v1/metrics`            | MAE, RMSE, max error, net imbalance, over/under frequency |
 
 Both data endpoints accept `start`, `end` (`YYYY-MM-DD`, inside January 2026)
-and `snapshot` (`day_ahead` by default, or `latest`). Interactive docs:
-<http://localhost:8000/docs>.
+and `snapshot` (`day_ahead` by default, or `latest`). `/metrics` also returns
+`max_error_time`, the settlement period of the largest absolute error, which
+drives the storm spotlight. Interactive docs: <http://localhost:8000/docs>.
 
 ```jsonc
 // GET /api/v1/generation-data?start=2026-01-05&end=2026-01-05
@@ -149,7 +180,8 @@ and `snapshot` (`day_ahead` by default, or `latest`). Interactive docs:
 | `under_forecast_pct`      | share with `error < 0` (exact ties count in neither bucket)    |
 
 Metrics are computed only on periods where both actual and forecast exist, so
-`sample_size` always reflects real evidence.
+`sample_size` always reflects real evidence. `max_error_time` is the `startTime`
+of the period that produced `max_error_mw`.
 
 **January 2026 day-ahead result:** 1,488 periods, MAE **2,126.12 MW**, RMSE
 **2,620.80 MW**, max error **6,857 MW**, net imbalance **2,738,361 MW**, with
@@ -290,5 +322,6 @@ This project was built with AI assistance. Tools used:
 No ChatGPT, Claude, GitHub Copilot or other AI coding tools were used. All
 AI-generated code was reviewed and verified with the backend test suite
 (13 passing tests), `npm run lint`, `npm run build`, and browser-level
-Playwright checks covering live data, range changes, tabs, exports, mobile
-layout and offline failure states.
+Playwright checks covering live data, range changes, tabs, the storm spotlight,
+delta shading, settlement filters, analytical views, CSV download, refresh,
+mobile layout and offline failure states.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { TooltipContentProps } from "recharts";
 import {
   Area,
@@ -17,6 +17,7 @@ import {
   Download,
   FileJson,
   FileSpreadsheet,
+  Layers,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -49,8 +50,8 @@ import {
   RANGE_PRESETS,
   RESOLUTIONS,
   rangeSpanDays,
+  type ChartRange,
   type RangeKey,
-  type RangePreset,
   type Resolution,
 } from "@/lib/ranges";
 import { cn } from "@/lib/utils";
@@ -62,7 +63,7 @@ import type {
 interface ForecastChartProps {
   data: GenerationDataResponse | null;
   loading: boolean;
-  range: RangePreset;
+  range: ChartRange;
   resolution: Resolution;
   onRangeChange: (key: RangeKey) => void;
   onResolutionChange: (resolution: Resolution) => void;
@@ -73,6 +74,9 @@ interface ChartPoint {
   actual_mw: number | null;
   forecast_mw: number | null;
   error_mw: number | null;
+  deltaBase: number | null;
+  deltaOver: number | null;
+  deltaUnder: number | null;
 }
 
 const BUCKET_MS: Record<Exclude<Resolution, "30m">, number> = {
@@ -85,17 +89,34 @@ function average(values: number[]): number | null {
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
+function withDelta(
+  point: Omit<ChartPoint, "deltaBase" | "deltaOver" | "deltaUnder">,
+): ChartPoint {
+  if (point.actual_mw == null || point.forecast_mw == null) {
+    return { ...point, deltaBase: null, deltaOver: null, deltaUnder: null };
+  }
+
+  return {
+    ...point,
+    deltaBase: Math.min(point.actual_mw, point.forecast_mw),
+    deltaOver: Math.max(0, point.forecast_mw - point.actual_mw),
+    deltaUnder: Math.max(0, point.actual_mw - point.forecast_mw),
+  };
+}
+
 function buildChartData(
   points: GenerationDataPoint[],
   resolution: Resolution,
 ): ChartPoint[] {
   if (resolution === "30m") {
-    return points.map((point) => ({
-      startTime: point.startTime,
-      actual_mw: point.actual_mw,
-      forecast_mw: point.forecast_mw,
-      error_mw: point.error_mw,
-    }));
+    return points
+      .map((point) => ({
+        startTime: point.startTime,
+        actual_mw: point.actual_mw,
+        forecast_mw: point.forecast_mw,
+        error_mw: point.error_mw,
+      }))
+      .map(withDelta);
   }
 
   const bucketSize = BUCKET_MS[resolution];
@@ -126,7 +147,8 @@ function buildChartData(
       actual_mw: average(bucket.actual),
       forecast_mw: average(bucket.forecast),
       error_mw: average(bucket.error),
-    }));
+    }))
+    .map(withDelta);
 }
 
 function ChartTooltip({ active, payload }: TooltipContentProps) {
@@ -197,6 +219,26 @@ function EmptyChart({ hasError }: { hasError: boolean }) {
   );
 }
 
+const EXPORT_THERMAL_PRICE_GBP_PER_MWH = 120;
+
+function settlementPeriod(iso: string): number {
+  const date = new Date(iso);
+  return Math.floor((date.getUTCHours() * 60 + date.getUTCMinutes()) / 30) + 1;
+}
+
+function biasType(error: number | null): "OVER" | "UNDER" | "BALANCED" {
+  if (error == null) return "BALANCED";
+  if (error > 0) return "OVER";
+  if (error < 0) return "UNDER";
+  return "BALANCED";
+}
+
+function imbalanceCostGbp(error: number | null): number | null {
+  if (error == null) return null;
+  // A settlement period is 30 minutes, so MW × 0.5 h gives the MWh exposure.
+  return Math.round(Math.abs(error) * 0.5 * EXPORT_THERMAL_PRICE_GBP_PER_MWH);
+}
+
 export function ForecastChart({
   data,
   loading,
@@ -205,6 +247,7 @@ export function ForecastChart({
   onRangeChange,
   onResolutionChange,
 }: ForecastChartProps) {
+  const [showDeltaFill, setShowDeltaFill] = useState(true);
   const points = useMemo(() => data?.points ?? [], [data]);
   const spanDays = rangeSpanDays(range);
 
@@ -236,10 +279,12 @@ export function ForecastChart({
       downloadCsv(
         points.map((point) => ({
           startTime: point.startTime,
-          publishTime: point.publishTime,
+          settlementPeriod: settlementPeriod(point.startTime),
           actual_mw: point.actual_mw,
           forecast_mw: point.forecast_mw,
           error_mw: point.error_mw,
+          bias_type: biasType(point.error_mw),
+          imbalance_cost_gbp: imbalanceCostGbp(point.error_mw),
         })),
         `${base}.csv`,
       );
@@ -294,6 +339,24 @@ export function ForecastChart({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              aria-pressed={showDeltaFill}
+              aria-label="Toggle forecast delta shading"
+              onClick={() => setShowDeltaFill((value) => !value)}
+              className={cn(
+                "h-8 border text-xs",
+                showDeltaFill
+                  ? "border-zinc-700 bg-zinc-800 text-zinc-100 hover:bg-zinc-700 hover:text-white"
+                  : "border-zinc-800 bg-zinc-900/40 text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100",
+              )}
+            >
+              <Layers className="size-3.5" />
+              Delta fill
+            </Button>
+
             <Select
               value={resolution}
               onValueChange={(value) =>
@@ -374,7 +437,7 @@ export function ForecastChart({
             })}
           </div>
 
-          <div className="flex items-center gap-4 text-[10px] text-zinc-500">
+          <div className="flex flex-wrap items-center gap-4 text-[10px] text-zinc-500">
             <span className="flex items-center gap-1.5">
               <span className="h-0.5 w-5 rounded-full bg-zinc-100" />
               Actual
@@ -383,6 +446,18 @@ export function ForecastChart({
               <span className="h-0.5 w-5 rounded-full border-t border-dashed border-emerald-400" />
               Forecast
             </span>
+            {showDeltaFill ? (
+              <>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-3 rounded-[2px] bg-rose-500/40" />
+                  Over
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-3 rounded-[2px] bg-emerald-400/40" />
+                  Under
+                </span>
+              </>
+            ) : null}
           </div>
         </div>
 
@@ -420,6 +495,42 @@ export function ForecastChart({
                         offset="100%"
                         stopColor="#fafafa"
                         stopOpacity={0}
+                      />
+                    </linearGradient>
+                    <linearGradient
+                      id="delta-over-fill"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop
+                        offset="0%"
+                        stopColor="#f43f5e"
+                        stopOpacity={0.5}
+                      />
+                      <stop
+                        offset="100%"
+                        stopColor="#f43f5e"
+                        stopOpacity={0.2}
+                      />
+                    </linearGradient>
+                    <linearGradient
+                      id="delta-under-fill"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop
+                        offset="0%"
+                        stopColor="#34d399"
+                        stopOpacity={0.5}
+                      />
+                      <stop
+                        offset="100%"
+                        stopColor="#34d399"
+                        stopOpacity={0.2}
                       />
                     </linearGradient>
                   </defs>
@@ -475,6 +586,40 @@ export function ForecastChart({
                     }}
                     isAnimationActive={false}
                   />
+                  {showDeltaFill ? (
+                    <>
+                      <Area
+                        type="monotone"
+                        dataKey="deltaBase"
+                        stackId="delta"
+                        stroke="none"
+                        fill="transparent"
+                        dot={false}
+                        activeDot={false}
+                        isAnimationActive={false}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="deltaOver"
+                        stackId="delta"
+                        stroke="none"
+                        fill="url(#delta-over-fill)"
+                        dot={false}
+                        activeDot={false}
+                        isAnimationActive={false}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="deltaUnder"
+                        stackId="delta"
+                        stroke="none"
+                        fill="url(#delta-under-fill)"
+                        dot={false}
+                        activeDot={false}
+                        isAnimationActive={false}
+                      />
+                    </>
+                  ) : null}
                   <Line
                     type="monotone"
                     dataKey="forecast_mw"

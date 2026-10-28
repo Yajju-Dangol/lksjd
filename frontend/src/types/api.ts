@@ -34,6 +34,7 @@ export interface MetricsResponse {
   mae_mw: number;
   rmse_mw: number;
   max_error_mw: number;
+  max_error_time: string | null;
   total_net_imbalance_mw: number;
   bias_mw: number;
   over_forecast_pct: number;

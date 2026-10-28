@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   Activity,
   Clock3,
@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -101,19 +102,80 @@ function PeriodTable({
   points: GenerationDataPoint[];
   loading: boolean;
 }) {
-  const latest = useMemo(
-    () => points.filter((point) => point.error_mw != null).slice(-24).reverse(),
-    [points],
-  );
+  const [filter, setFilter] = useState<"all" | "high" | "under">("all");
+
+  const filtered = useMemo(() => {
+    const aligned = points.filter((point) => point.error_mw != null);
+    if (filter === "high") {
+      return aligned
+        .filter((point) => Math.abs(point.error_mw ?? 0) > 2000)
+        .sort(
+          (left, right) =>
+            Math.abs(right.error_mw ?? 0) - Math.abs(left.error_mw ?? 0),
+        );
+    }
+    if (filter === "under") {
+      return aligned
+        .filter((point) => (point.error_mw ?? 0) < 0)
+        .sort((left, right) => right.startTime.localeCompare(left.startTime));
+    }
+    return aligned.sort((left, right) =>
+      right.startTime.localeCompare(left.startTime),
+    );
+  }, [filter, points]);
 
   if (loading && points.length === 0) return <TableSkeleton />;
-  if (latest.length === 0) {
-    return <EmptyRows message="No aligned settlement periods for this range." />;
-  }
+
+  const emptyMessage =
+    filter === "high"
+      ? "No periods above 2,000 MW in this range."
+      : filter === "under"
+        ? "No under-forecast periods in this range."
+        : "No aligned settlement periods for this range.";
 
   return (
     <div>
-      <div className="max-h-[318px] overflow-auto pr-1">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-2">
+        <div
+          className="inline-flex flex-wrap items-center gap-1 rounded-lg border border-zinc-800/60 bg-zinc-900/30 p-1"
+          role="group"
+          aria-label="Settlement period filters"
+        >
+          {[
+            { key: "all" as const, label: "All periods" },
+            { key: "high" as const, label: "High error >2,000 MW" },
+            { key: "under" as const, label: "Under-forecast only" },
+          ].map((option) => {
+            const active = filter === option.key;
+            return (
+              <Button
+                key={option.key}
+                type="button"
+                size="sm"
+                variant="ghost"
+                aria-pressed={active}
+                onClick={() => setFilter(option.key)}
+                className={cn(
+                  "h-6 rounded-md px-2 text-[10px] font-medium transition-colors",
+                  active
+                    ? "bg-zinc-100 text-zinc-950 hover:bg-white"
+                    : "text-zinc-400 hover:bg-zinc-800/70 hover:text-zinc-100",
+                )}
+              >
+                {option.label}
+              </Button>
+            );
+          })}
+        </div>
+        <span className="text-[10px] tabular-nums text-zinc-600">
+          {formatNumber(filtered.length)} periods
+        </span>
+      </div>
+
+      {filtered.length === 0 ? (
+        <EmptyRows message={emptyMessage} />
+      ) : (
+        <div className="max-h-[318px] overflow-auto pr-1">
         <Table>
           <TableHeader className="sticky top-0 z-10 bg-[#0c0c0e]">
             <TableRow className="border-zinc-800/60 hover:bg-transparent">
@@ -135,7 +197,7 @@ function PeriodTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {latest.map((point) => (
+            {filtered.map((point) => (
               <TableRow
                 key={point.startTime}
                 className="border-zinc-800/40 hover:bg-zinc-900/40"
@@ -167,6 +229,7 @@ function PeriodTable({
           </TableBody>
         </Table>
       </div>
+      )}
     </div>
   );
 }

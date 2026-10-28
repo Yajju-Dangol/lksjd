@@ -82,6 +82,7 @@ def test_metrics_only_counts_aligned_periods(client: TestClient) -> None:
     body = response.json()
     assert body["sample_size"] == 2
     assert body["mae_mw"] == 40.0
+    assert body["max_error_time"] == "2026-01-01T00:00:00Z"
     assert body["total_net_imbalance_mw"] == 80.0
     assert body["over_forecast_pct"] == 100.0
     assert body["under_forecast_pct"] == 0.0

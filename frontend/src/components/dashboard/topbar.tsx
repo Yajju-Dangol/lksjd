@@ -14,6 +14,7 @@ import { formatDateTime } from "@/lib/format";
 import type { DataSource } from "@/types/api";
 
 interface TopbarProps {
+  title: string;
   loading: boolean;
   offline: boolean;
   source: DataSource | null;
@@ -87,6 +88,7 @@ function SourceBadge({
 }
 
 export function Topbar({
+  title,
   loading,
   offline,
   source,
@@ -110,7 +112,7 @@ export function Topbar({
 
         <div className="flex min-w-0 items-center gap-2">
           <h1 className="text-base font-medium tracking-tight text-zinc-100">
-            Dashboard
+            {title}
           </h1>
           <Badge
             variant="outline"
