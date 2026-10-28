@@ -7,9 +7,13 @@ translates that error into thermal-backup cost exposure.
 
 ![WindScope dashboard](docs/dashboard.png)
 
-> Status: **Phases 1–3 complete** — FastAPI data engine, interactive dashboard,
-> Docker packaging and deployment configs are in place. The remaining manual
-> step is linking a Vercel/Render account and recording the demo video.
+> Status: **Live on Vercel** — dashboard and API are deployed and verified.
+>
+> - Frontend: <https://windscope-lksjd.vercel.app>
+> - Backend API: <https://windscope-api-lksjd.vercel.app>
+> - API docs: <https://windscope-api-lksjd.vercel.app/docs>
+>
+> The remaining manual step is recording the demo video and submitting the form.
 
 ## What the dashboard does
 
@@ -124,7 +128,8 @@ the configured frontend origins.
 Both data endpoints accept `start`, `end` (`YYYY-MM-DD`, inside January 2026)
 and `snapshot` (`day_ahead` by default, or `latest`). `/metrics` also returns
 `max_error_time`, the settlement period of the largest absolute error, which
-drives the storm spotlight. Interactive docs: <http://localhost:8000/docs>.
+drives the storm spotlight. Interactive docs: <https://windscope-api-lksjd.vercel.app/docs>
+(local: <http://localhost:8000/docs>).
 
 ```jsonc
 // GET /api/v1/generation-data?start=2026-01-05&end=2026-01-05
@@ -276,38 +281,50 @@ npm run build
 
 ## Deployment
 
-The repository is deployment-ready for split hosting:
+The app is deployed as two independent Vercel projects:
 
-- **Frontend (Vercel / Netlify):** root directory `frontend`, build
-  `npm run build`, environment `NEXT_PUBLIC_API_URL=https://<backend-host>`.
-- **Backend (Render / Railway / Fly.io):** deploy `backend/` with its
-  `Dockerfile`, set `ENVIRONMENT=production` and
-  `CORS_ORIGINS=https://<frontend-host>`. A root `render.yaml` blueprint is
-  included for a one-click Render web service.
-- **Single host:** run `docker compose up --build -d` behind a reverse proxy
-  and map the two published ports.
+| Project | Vercel project | Production URL |
+| :--- | :--- | :--- |
+| Frontend | `windscope-lksjd` | <https://windscope-lksjd.vercel.app> |
+| Backend | `windscope-api-lksjd` | <https://windscope-api-lksjd.vercel.app> |
 
-### Vercel CLI (two projects)
+Deployment protection is disabled so the URLs are publicly accessible in an
+incognito window.
 
-Vercel detects the FastAPI `app` in `backend/main.py`, so no custom builder is
-needed. `backend/vercel.json` raises the function timeout to 60 seconds.
+Production environment variables:
 
-```bash
-# 1. Backend
-cd backend
-npx vercel login
-npx vercel --prod --env CORS_ORIGINS=https://<frontend>.vercel.app
+```text
+# windscope-lksjd (frontend)
+NEXT_PUBLIC_API_URL=https://windscope-api-lksjd.vercel.app
 
-# 2. Frontend (rebuild after you know the backend URL)
-cd ../frontend
-npx vercel --prod --build-env NEXT_PUBLIC_API_URL=https://<backend>.vercel.app
+# windscope-api-lksjd (backend)
+ENVIRONMENT=production
+CORS_ORIGINS=https://windscope-lksjd.vercel.app,https://windscope-lksjd-yazudangol-gmailcoms-projects.vercel.app,http://localhost:3001,http://127.0.0.1:3001
 ```
 
 `NEXT_PUBLIC_API_URL` is inlined at build time, so changing the backend URL
-requires a frontend rebuild. After both projects exist, add the exact frontend
-origin to the backend's `CORS_ORIGINS`.
+requires a frontend rebuild.
 
-> Live URLs are added here once the Vercel/Render projects are linked.
+### Redeploying
+
+Vercel detects the FastAPI `app` in `backend/main.py`; `backend/vercel.json`
+raises the function timeout to 60 seconds. From each project directory:
+
+```bash
+# Backend
+cd backend
+npx vercel link --yes --project windscope-api-lksjd --scope yazudangol-gmailcoms-projects
+npx vercel deploy --prod --yes --scope yazudangol-gmailcoms-projects
+
+# Frontend
+cd ../frontend
+npx vercel link --yes --project windscope-lksjd --scope yazudangol-gmailcoms-projects
+npx vercel deploy --prod --yes --scope yazudangol-gmailcoms-projects
+```
+
+The projects are intentionally deployed from their subdirectories, so the
+Vercel project **Root Directory** setting is left empty. The checked-in
+`Dockerfile` and `docker-compose.yml` remain available for self-hosting.
 
 ## AI tool disclosure
 
@@ -318,10 +335,15 @@ This project was built with AI assistance. Tools used:
 - **DeepSeek V4.1 Flash** — the model powering the OpenCode agent.
 - **shadcn/ui CLI** — scaffolded the Radix-based UI primitives and theme
   wiring.
+- **Vercel MCP** — created both projects, set environment variables, checked
+  deployment status/build logs/runtime errors, and verified the production
+  request logs. Vercel CLI was used for the local source upload because the
+  GitHub repository is not connected to Vercel's Git integration.
 
 No ChatGPT, Claude, GitHub Copilot or other AI coding tools were used. All
 AI-generated code was reviewed and verified with the backend test suite
 (13 passing tests), `npm run lint`, `npm run build`, and browser-level
 Playwright checks covering live data, range changes, tabs, the storm spotlight,
 delta shading, settlement filters, analytical views, CSV download, refresh,
-mobile layout and offline failure states.
+mobile layout and offline failure states. The production deployment was also
+checked for `200` responses, CORS, build logs and runtime errors.
