@@ -91,11 +91,20 @@ def write_cache(actuals: list[dict], forecasts: list[dict]) -> datetime:
     }
 
     tmp_path = path.with_name(f"{path.name}.tmp")
-    tmp_path.write_text(
-        json.dumps(payload, separators=(",", ":")),
-        encoding="utf-8",
-    )
-    os.replace(tmp_path, path)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp_path.write_text(
+            json.dumps(payload, separators=(",", ":")),
+            encoding="utf-8",
+        )
+        os.replace(tmp_path, path)
+    except OSError as exc:
+        # Serverless platforms expose a read-only bundle with only /tmp writable.
+        # Serving fresh data still works; persistence is best-effort.
+        logger.warning("Could not persist cache at %s: %s", path, exc)
+        tmp_path.unlink(missing_ok=True)
+        return updated_at
+
     logger.info(
         "Cached %d actual and %d forecast rows at %s",
         len(actuals),
