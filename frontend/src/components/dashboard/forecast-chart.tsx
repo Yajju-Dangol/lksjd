@@ -354,7 +354,7 @@ export function ForecastChart({
               )}
             >
               <Layers className="size-3.5" />
-              Delta fill
+              Show delta fill
             </Button>
 
             <Select

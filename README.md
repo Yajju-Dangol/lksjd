@@ -16,7 +16,7 @@ translates that error into thermal-backup cost exposure.
 - **Actual vs day-ahead forecast** chart across 30-minute settlement periods,
   with **Full Jan 2026**, **Jan 1–7** and **Jan 15–21** presets plus 30-minute,
   1-hour and 3-hour resolution controls.
-- **Delta fill toggle** that shades every miss red when forecast > actual and
+- **Show delta fill toggle** that shades every miss red when forecast > actual and
   green when forecast < actual, so over/under-forecast volume is visible without
   reading the tooltip.
 - **Storm event spotlight** that jumps to the 48-hour window around the largest
