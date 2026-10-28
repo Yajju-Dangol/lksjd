@@ -7,9 +7,9 @@ translates that error into thermal-backup cost exposure.
 
 ![WindScope dashboard](docs/dashboard.png)
 
-> Status: **Phase 2 complete** — FastAPI data engine and the interactive
-> Next.js dashboard are running. Phase 3 packaging (Docker) is included;
-> cloud deployment links will be added after go-live.
+> Status: **Phases 1–3 complete** — FastAPI data engine, interactive dashboard,
+> Docker packaging and deployment configs are in place. The remaining manual
+> step is linking a Vercel/Render account and recording the demo video.
 
 ## What the dashboard does
 
@@ -250,15 +250,32 @@ The repository is deployment-ready for split hosting:
   `npm run build`, environment `NEXT_PUBLIC_API_URL=https://<backend-host>`.
 - **Backend (Render / Railway / Fly.io):** deploy `backend/` with its
   `Dockerfile`, set `ENVIRONMENT=production` and
-  `CORS_ORIGINS=https://<frontend-host>`.
+  `CORS_ORIGINS=https://<frontend-host>`. A root `render.yaml` blueprint is
+  included for a one-click Render web service.
 - **Single host:** run `docker compose up --build -d` behind a reverse proxy
   and map the two published ports.
 
-Production checklist: confirm CORS contains the exact frontend origin, confirm
-`NEXT_PUBLIC_API_URL` is HTTPS, and smoke-test `/api/v1/health`,
-`/api/v1/generation-data` and `/api/v1/metrics` from an incognito window.
+### Vercel CLI (two projects)
 
-> Live URLs are added here once the Vercel and Render projects are linked.
+Vercel detects the FastAPI `app` in `backend/main.py`, so no custom builder is
+needed. `backend/vercel.json` raises the function timeout to 60 seconds.
+
+```bash
+# 1. Backend
+cd backend
+npx vercel login
+npx vercel --prod --env CORS_ORIGINS=https://<frontend>.vercel.app
+
+# 2. Frontend (rebuild after you know the backend URL)
+cd ../frontend
+npx vercel --prod --build-env NEXT_PUBLIC_API_URL=https://<backend>.vercel.app
+```
+
+`NEXT_PUBLIC_API_URL` is inlined at build time, so changing the backend URL
+requires a frontend rebuild. After both projects exist, add the exact frontend
+origin to the backend's `CORS_ORIGINS`.
+
+> Live URLs are added here once the Vercel/Render projects are linked.
 
 ## AI tool disclosure
 
