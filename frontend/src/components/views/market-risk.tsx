@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import type { LucideIcon } from "lucide-react";
 import { Flame, ShieldAlert, TrendingUp } from "lucide-react";
+import type { TooltipContentProps } from "recharts";
 import {
   Bar,
   BarChart,
@@ -92,6 +93,31 @@ function riskLevel(peak: number): {
     label: "Moderate",
     className: "border-zinc-800 bg-zinc-900/50 text-zinc-500",
   };
+}
+
+function RiskTooltip({ active, payload }: TooltipContentProps) {
+  const point = payload?.[0]?.payload as DayRisk | undefined;
+  if (!active || !point) return null;
+
+  return (
+    <div className="min-w-[170px] rounded-xl border border-zinc-700/60 bg-zinc-900/95 p-3 shadow-2xl shadow-black/50 backdrop-blur-xl">
+      <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-400">
+        {formatDate(`${point.date}T00:00:00Z`)}
+      </p>
+      <div className="mt-2 flex items-center justify-between gap-4 text-[11px]">
+        <span className="text-zinc-400">Daily MAE</span>
+        <span className="font-medium tabular-nums text-zinc-100">
+          {formatNumber(point.mae)} MW
+        </span>
+      </div>
+      <div className="mt-1.5 flex items-center justify-between gap-4 border-t border-zinc-800/80 pt-1.5 text-[11px]">
+        <span className="text-zinc-500">Peak miss</span>
+        <span className="font-medium tabular-nums text-rose-400">
+          {formatNumber(point.peak)} MW
+        </span>
+      </div>
+    </div>
+  );
 }
 
 function StatCard({
@@ -237,20 +263,7 @@ export function MarketRiskView({
                 />
                 <Tooltip
                   cursor={{ fill: "rgba(255,255,255,0.04)" }}
-                  contentStyle={{
-                    backgroundColor: "#18181b",
-                    border: "1px solid #3f3f46",
-                    borderRadius: 8,
-                    fontSize: 11,
-                  }}
-                  labelStyle={{ color: "#a1a1aa" }}
-                  labelFormatter={(label) =>
-                    formatDate(`${String(label)}T00:00:00Z`)
-                  }
-                  formatter={(value) => [
-                    `${formatNumber(Number(value))} MW`,
-                    "Daily MAE",
-                  ]}
+                  content={(props) => <RiskTooltip {...props} />}
                 />
                 <Bar
                   dataKey="mae"
