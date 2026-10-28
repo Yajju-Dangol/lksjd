@@ -22,11 +22,12 @@ import {
 } from "@/components/ui/tooltip";
 import { formatDeltaPct, formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { MetricsResponse } from "@/types/api";
+import type { MetricsResponse, Snapshot } from "@/types/api";
 
 interface KpiCardsProps {
   metrics: MetricsResponse | null;
-  latestMetrics: MetricsResponse | null;
+  baselineMetrics: MetricsResponse | null;
+  baselineSnapshot: Snapshot;
   loading: boolean;
 }
 
@@ -54,10 +55,19 @@ function signalFromDelta(delta: number): Signal {
   return delta < 0 ? "positive" : "negative";
 }
 
+function snapshotLabel(snapshot: Snapshot): string {
+  return snapshot === "latest"
+    ? "latest forecast vintage"
+    : "day-ahead gate-closure forecast";
+}
+
 function buildItems(
   metrics: MetricsResponse,
   baseline: MetricsResponse,
+  baselineSnapshot: Snapshot,
 ): KpiItem[] {
+  const baselineLabel = snapshotLabel(baselineSnapshot);
+
   return [
     {
       label: "MAE",
@@ -65,8 +75,7 @@ function buildItems(
       unit: "MW",
       suffix: "%",
       delta: relativeDelta(metrics.mae_mw, baseline.mae_mw),
-      tooltip:
-        "Mean absolute error: mean of |forecast − actual| across aligned 30-minute periods. Compared with the latest forecast vintage for the same window.",
+      tooltip: `Mean absolute error: mean of |forecast − actual| across aligned 30-minute periods. Compared with the ${baselineLabel} for the same window.`,
       icon: Gauge,
       signal: signalFromDelta(relativeDelta(metrics.mae_mw, baseline.mae_mw)),
     },
@@ -101,7 +110,7 @@ function buildItems(
       suffix: "pp",
       delta: metrics.over_forecast_pct - baseline.over_forecast_pct,
       tooltip:
-        "Percentage of periods where the day-ahead forecast exceeded metered wind. A lower ratio reduces exposure to expensive thermal backup.",
+        "Percentage of periods where the selected forecast vintage exceeded metered wind. A lower ratio reduces exposure to expensive thermal backup.",
       icon: Scale,
       signal: signalFromDelta(
         metrics.over_forecast_pct - baseline.over_forecast_pct,
@@ -110,7 +119,13 @@ function buildItems(
   ];
 }
 
-function DeltaBadge({ item }: { item: KpiItem }) {
+function DeltaBadge({
+  item,
+  baselineLabel,
+}: {
+  item: KpiItem;
+  baselineLabel: string;
+}) {
   const Icon =
     item.signal === "positive"
       ? ArrowDownRight
@@ -121,7 +136,7 @@ function DeltaBadge({ item }: { item: KpiItem }) {
   return (
     <Badge
       variant="outline"
-      title="Change vs latest forecast vintage for the same window"
+      title={`Change vs ${baselineLabel} for the same window`}
       className={cn(
         "h-5 gap-1 border px-1.5 text-[10px] font-medium tabular-nums",
         item.signal === "positive" &&
@@ -138,7 +153,13 @@ function DeltaBadge({ item }: { item: KpiItem }) {
   );
 }
 
-function KpiCard({ item }: { item: KpiItem }) {
+function KpiCard({
+  item,
+  baselineLabel,
+}: {
+  item: KpiItem;
+  baselineLabel: string;
+}) {
   return (
     <Card className="group relative gap-0 overflow-hidden border border-zinc-800/60 bg-zinc-950/70 py-0 ring-0 transition-all duration-300 hover:border-zinc-700/80 hover:shadow-[0_0_44px_-20px_rgba(255,255,255,0.22)]">
       <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-zinc-600/50 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
@@ -167,7 +188,7 @@ function KpiCard({ item }: { item: KpiItem }) {
               </TooltipContent>
             </Tooltip>
           </div>
-          <DeltaBadge item={item} />
+          <DeltaBadge item={item} baselineLabel={baselineLabel} />
         </div>
 
         <p className="flex items-baseline gap-1.5 text-[26px] font-semibold leading-none tracking-tight text-zinc-50 tabular-nums">
@@ -195,7 +216,14 @@ function KpiSkeleton() {
   );
 }
 
-export function KpiCards({ metrics, latestMetrics, loading }: KpiCardsProps) {
+export function KpiCards({
+  metrics,
+  baselineMetrics,
+  baselineSnapshot,
+  loading,
+}: KpiCardsProps) {
+  const baselineLabel = snapshotLabel(baselineSnapshot);
+
   if (loading && !metrics) {
     return (
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -206,9 +234,9 @@ export function KpiCards({ metrics, latestMetrics, loading }: KpiCardsProps) {
     );
   }
 
-  const baseline = latestMetrics ?? metrics;
+  const baseline = baselineMetrics ?? metrics;
   const items =
-    metrics && baseline ? buildItems(metrics, baseline) : null;
+    metrics && baseline ? buildItems(metrics, baseline, baselineSnapshot) : null;
 
   if (!items) {
     const placeholders: KpiItem[] = [
@@ -256,7 +284,11 @@ export function KpiCards({ metrics, latestMetrics, loading }: KpiCardsProps) {
     return (
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {placeholders.map((item) => (
-          <KpiCard key={item.label} item={item} />
+          <KpiCard
+            key={item.label}
+            item={item}
+            baselineLabel={baselineLabel}
+          />
         ))}
       </div>
     );
@@ -265,7 +297,7 @@ export function KpiCards({ metrics, latestMetrics, loading }: KpiCardsProps) {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {items.map((item) => (
-        <KpiCard key={item.label} item={item} />
+        <KpiCard key={item.label} item={item} baselineLabel={baselineLabel} />
       ))}
     </div>
   );

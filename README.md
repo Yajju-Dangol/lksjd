@@ -17,9 +17,13 @@ translates that error into thermal-backup cost exposure.
 
 ## What the dashboard does
 
-- **Actual vs day-ahead forecast** chart across 30-minute settlement periods,
-  with **Full Jan 2026**, **Jan 1–7** and **Jan 15–21** presets plus 30-minute,
-  1-hour and 3-hour resolution controls.
+- **Actual vs forecast** chart across 30-minute settlement periods, with **Full
+  Jan 2026**, **Jan 1–7** and **Jan 15–21** presets plus 30-minute, 1-hour and
+  3-hour resolution controls.
+- **Snapshot toggle** between the strict **Day-ahead** vintage (published before
+  11:00 UTC on D-1) and the **Latest** published vintage. The chart, table and
+  KPI values follow the selected snapshot; KPI deltas compare it with the other
+  vintage.
 - **Show delta fill toggle** that shades every miss red when forecast > actual and
   green when forecast < actual, so over/under-forecast volume is visible without
   reading the tooltip.
@@ -28,8 +32,7 @@ translates that error into thermal-backup cost exposure.
   2026-01-12 01:00 UTC**, so the pill is generated from the API rather than
   hard-coded to a date.
 - **KPI cards** for MAE, RMSE, peak wind imbalance and forecast bias ratio, with
-  coloured deltas against the latest available forecast vintage for the same
-  window.
+  coloured deltas against the alternate forecast vintage for the same window.
 - **Settlement Period Details**, **High Error Events Table** and **Publish Lead
   Time Analysis** tabs. The details table has instant **All periods**,
   **High error >2,000 MW** and **Under-forecast only** filters.

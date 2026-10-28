@@ -7,12 +7,13 @@ import { DATASET_END, DATASET_START } from "@/lib/ranges";
 import type {
   GenerationDataResponse,
   MetricsResponse,
+  Snapshot,
 } from "@/types/api";
 
 export interface DashboardData {
   generation: GenerationDataResponse;
   metrics: MetricsResponse;
-  latestMetrics: MetricsResponse;
+  baselineMetrics: MetricsResponse;
   monthMetrics: MetricsResponse;
 }
 
@@ -26,6 +27,7 @@ interface DashboardState {
 export function useWindDashboard(
   start: string,
   end: string,
+  snapshot: Snapshot = "day_ahead",
   externalRefreshToken = 0,
 ) {
   const [state, setState] = useState<DashboardState>({
@@ -43,7 +45,7 @@ export function useWindDashboard(
 
   useEffect(() => {
     const controller = new AbortController();
-    const rangeKey = `${start}:${end}`;
+    const rangeKey = `${start}:${end}:${snapshot}`;
     const rangeChanged = rangeRef.current !== rangeKey;
     rangeRef.current = rangeKey;
 
@@ -55,25 +57,30 @@ export function useWindDashboard(
     }));
 
     async function load() {
-      const generation = await api.generationData({ start, end }, controller.signal);
-      const metrics = await api.metrics(
-        { start, end, snapshot: "day_ahead" },
+      const generation = await api.generationData(
+        { start, end, snapshot },
         controller.signal,
       );
-      const latestMetrics = await api
-        .metrics({ start, end, snapshot: "latest" }, controller.signal)
+      const metrics = await api.metrics(
+        { start, end, snapshot },
+        controller.signal,
+      );
+      const comparisonSnapshot: Snapshot =
+        snapshot === "day_ahead" ? "latest" : "day_ahead";
+      const baselineMetrics = await api
+        .metrics({ start, end, snapshot: comparisonSnapshot }, controller.signal)
         .catch(() => metrics);
       const isFullMonth = start === DATASET_START && end === DATASET_END;
       const monthMetrics = isFullMonth
         ? metrics
         : await api
             .metrics(
-              { start: DATASET_START, end: DATASET_END, snapshot: "day_ahead" },
+              { start: DATASET_START, end: DATASET_END, snapshot },
               controller.signal,
             )
             .catch(() => metrics);
 
-      return { generation, metrics, latestMetrics, monthMetrics };
+      return { generation, metrics, baselineMetrics, monthMetrics };
     }
 
     load()
@@ -100,7 +107,7 @@ export function useWindDashboard(
       });
 
     return () => controller.abort();
-  }, [start, end, refreshToken, externalRefreshToken]);
+  }, [start, end, snapshot, refreshToken, externalRefreshToken]);
 
   return { ...state, refresh };
 }

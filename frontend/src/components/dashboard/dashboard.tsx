@@ -23,6 +23,7 @@ import {
   type Resolution,
 } from "@/lib/ranges";
 import { cn } from "@/lib/utils";
+import type { Snapshot } from "@/types/api";
 
 const VIEW_TITLES: Record<DashboardView, string> = {
   dashboard: "Dashboard",
@@ -92,6 +93,7 @@ export function Dashboard() {
   const [rangeKey, setRangeKey] = useState<RangeKey>("full");
   const [spotlightRange, setSpotlightRange] = useState<ChartRange | null>(null);
   const [resolution, setResolution] = useState<Resolution>("30m");
+  const [snapshot, setSnapshot] = useState<Snapshot>("day_ahead");
   const [refreshToken, setRefreshToken] = useState(0);
 
   const preset = getRange(rangeKey);
@@ -99,11 +101,12 @@ export function Dashboard() {
   const { data, loading, error, refresh } = useWindDashboard(
     range.start,
     range.end,
+    snapshot,
     refreshToken,
   );
 
   const metrics = data?.metrics ?? null;
-  const latestMetrics = data?.latestMetrics ?? null;
+  const baselineMetrics = data?.baselineMetrics ?? null;
   const points = data?.generation.points ?? [];
   const monthMetrics = data?.monthMetrics ?? null;
 
@@ -131,6 +134,11 @@ export function Dashboard() {
   function handleRangeChange(key: RangeKey) {
     setSpotlightRange(null);
     setRangeKey(key);
+  }
+
+  function handleSnapshotChange(next: Snapshot) {
+    setSpotlightRange(null);
+    setSnapshot(next);
   }
 
   return (
@@ -177,7 +185,10 @@ export function Dashboard() {
               <section aria-label="Key performance indicators">
                 <KpiCards
                   metrics={metrics}
-                  latestMetrics={latestMetrics}
+                  baselineMetrics={baselineMetrics}
+                  baselineSnapshot={
+                    snapshot === "day_ahead" ? "latest" : "day_ahead"
+                  }
                   loading={loading}
                 />
               </section>
@@ -243,8 +254,10 @@ export function Dashboard() {
                   loading={loading}
                   range={range}
                   resolution={resolution}
+                  snapshot={snapshot}
                   onRangeChange={handleRangeChange}
                   onResolutionChange={setResolution}
+                  onSnapshotChange={handleSnapshotChange}
                 />
               </section>
 

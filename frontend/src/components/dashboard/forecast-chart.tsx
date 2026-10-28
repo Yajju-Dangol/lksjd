@@ -58,6 +58,7 @@ import { cn } from "@/lib/utils";
 import type {
   GenerationDataPoint,
   GenerationDataResponse,
+  Snapshot,
 } from "@/types/api";
 
 interface ForecastChartProps {
@@ -65,8 +66,10 @@ interface ForecastChartProps {
   loading: boolean;
   range: ChartRange;
   resolution: Resolution;
+  snapshot: Snapshot;
   onRangeChange: (key: RangeKey) => void;
   onResolutionChange: (resolution: Resolution) => void;
+  onSnapshotChange: (snapshot: Snapshot) => void;
 }
 
 interface ChartPoint {
@@ -244,8 +247,10 @@ export function ForecastChart({
   loading,
   range,
   resolution,
+  snapshot,
   onRangeChange,
   onResolutionChange,
+  onSnapshotChange,
 }: ForecastChartProps) {
   const [showDeltaFill, setShowDeltaFill] = useState(true);
   const points = useMemo(() => data?.points ?? [], [data]);
@@ -307,9 +312,16 @@ export function ForecastChart({
       <CardContent className="px-4 py-4 sm:px-5 sm:py-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
-            <h2 className="text-sm font-medium tracking-tight text-zinc-200">
-              Actual vs forecast
-            </h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-sm font-medium tracking-tight text-zinc-200">
+                Actual vs forecast
+              </h2>
+              <span className="rounded-full border border-zinc-800 bg-zinc-900/40 px-2 py-0.5 text-[9px] font-medium uppercase tracking-[0.08em] text-zinc-500">
+                {snapshot === "day_ahead"
+                  ? "Gate closure · 11:00 UTC D-1"
+                  : "Latest published"}
+              </span>
+            </div>
             <div className="mt-4 flex flex-wrap items-end gap-x-3 gap-y-1">
               <span className="text-3xl font-semibold tracking-tight text-zinc-50 tabular-nums">
                 {showSkeleton || !data ? "—" : formatTwh(actualTwh)}
@@ -339,6 +351,39 @@ export function ForecastChart({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <div
+              className="inline-flex items-center gap-1 rounded-lg border border-zinc-800/60 bg-zinc-900/30 p-1"
+              role="group"
+              aria-label="Forecast snapshot"
+            >
+              {(
+                [
+                  { value: "day_ahead", label: "Day-ahead" },
+                  { value: "latest", label: "Latest" },
+                ] as const
+              ).map((option) => {
+                const active = snapshot === option.value;
+                return (
+                  <Button
+                    key={option.value}
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    aria-pressed={active}
+                    onClick={() => onSnapshotChange(option.value)}
+                    className={cn(
+                      "h-6 rounded-md px-2 text-[10px] font-medium transition-colors",
+                      active
+                        ? "bg-zinc-100 text-zinc-950 hover:bg-white"
+                        : "text-zinc-400 hover:bg-zinc-800/70 hover:text-zinc-100",
+                    )}
+                  >
+                    {option.label}
+                  </Button>
+                );
+              })}
+            </div>
+
             <Button
               type="button"
               variant="outline"

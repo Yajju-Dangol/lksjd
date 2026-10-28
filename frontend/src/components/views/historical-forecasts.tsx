@@ -117,6 +117,7 @@ export function HistoricalForecastsView({
   const { data, loading, error, refresh } = useWindDashboard(
     DATASET_START,
     DATASET_END,
+    "day_ahead",
     refreshToken,
   );
   const [selectedVintage, setSelectedVintage] = useState<string | null>(null);

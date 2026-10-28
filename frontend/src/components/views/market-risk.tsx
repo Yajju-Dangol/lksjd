@@ -155,6 +155,7 @@ export function MarketRiskView({
   const { data, loading, error, refresh } = useWindDashboard(
     DATASET_START,
     DATASET_END,
+    "day_ahead",
     refreshToken,
   );
   const points = useMemo(
