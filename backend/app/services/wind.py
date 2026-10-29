@@ -65,6 +65,14 @@ _lock = threading.Lock()
 _raw_cache: tuple[float, RawData] | None = None
 
 
+def _cache_mtime() -> float:
+    """Return the cache mtime, or 0 when the file is absent/unreadable."""
+    try:
+        return settings.cache_file.stat().st_mtime
+    except OSError:
+        return 0.0
+
+
 # ---------------------------------------------------------------------------
 # Window + normalisation helpers
 # ---------------------------------------------------------------------------
@@ -236,11 +244,7 @@ def _get_raw() -> RawData:
     global _raw_cache
 
     with _lock:
-        cache_mtime = (
-            settings.cache_file.stat().st_mtime
-            if settings.cache_file.exists()
-            else 0.0
-        )
+        cache_mtime = _cache_mtime()
 
         if _raw_cache is not None and _raw_cache[0] == cache_mtime:
             raw: RawData | None = _raw_cache[1]
@@ -259,7 +263,7 @@ def _get_raw() -> RawData:
 
         try:
             fresh = _fetch_and_store()
-        except (ElexonError, ValueError) as exc:
+        except (ElexonError, ValueError, OSError) as exc:
             if raw is not None:
                 logger.warning(
                     "Elexon unavailable (%s); serving cached January 2026 data "
@@ -273,7 +277,7 @@ def _get_raw() -> RawData:
                 f"Underlying error: {exc}"
             ) from exc
 
-        _raw_cache = (settings.cache_file.stat().st_mtime, fresh)
+        _raw_cache = (_cache_mtime(), fresh)
         return fresh
 
 

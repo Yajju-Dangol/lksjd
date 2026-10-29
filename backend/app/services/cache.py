@@ -100,9 +100,14 @@ def write_cache(actuals: list[dict], forecasts: list[dict]) -> datetime:
         os.replace(tmp_path, path)
     except OSError as exc:
         # Serverless platforms expose a read-only bundle with only /tmp writable.
-        # Serving fresh data still works; persistence is best-effort.
+        # Serving fresh data still works; persistence is best-effort. The cleanup
+        # itself can fail on the same read-only filesystem, so never let it turn
+        # a successful Elexon fetch into a 500 response.
         logger.warning("Could not persist cache at %s: %s", path, exc)
-        tmp_path.unlink(missing_ok=True)
+        try:
+            tmp_path.unlink(missing_ok=True)
+        except OSError:
+            pass
         return updated_at
 
     logger.info(
